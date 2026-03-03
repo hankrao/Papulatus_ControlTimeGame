@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>困難拉圖斯：控時挑戰</title>
+  <style>
+    :root{
+      --bg:#0f1115;         /* 固定暗色背景 */
+      --card:#181c22;
+      --card-2:#1f2630;
+      --text:#e8ecf1;
+      --muted:#aab4c0;
+      --accent:#6ad0ff;
+      --danger:#ff6b6b;
+      --success:#56f09f;
+      --focus:#94bfff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --radius:14px;
+      --shadow: 0 6px 18px rgba(0,0,0,.35);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height:1.6;
+    }
+    header{ padding:24px 16px 8px; text-align:center; }
+    header h1{ margin:0 0 6px; font-size: clamp(22px, 3.5vw, 32px); letter-spacing:.5px; }
+    header p{ margin:0; color:var(--muted); font-size:14px; }
+
+    .toolbar{ display:grid; grid-template-columns: 1fr auto auto; gap:12px; padding:16px; max-width:1050px; margin:0 auto; align-items:center; }
+    .toolbar .group{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:var(--card); padding:10px 12px; border-radius:12px; box-shadow:var(--shadow); }
+
+    label{ color:var(--muted); font-size:14px; }
+    select, button{ border:none; outline:none; border-radius:10px; padding:10px 12px; background:var(--card-2); color:var(--text); font-weight:600; letter-spacing:.2px; transition: transform .08s ease, background .2s ease; }
+    select{ appearance:none; padding-right:30px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 16px, calc(100% - 12px) 16px; background-size: 6px 6px, 6px 6px; background-repeat:no-repeat; }
+    button{ cursor:pointer; }
+    button:hover{ background:#2a3441; }
+    button:active{ transform: translateY(1px) scale(.99); }
+    button.primary{ background: linear-gradient(180deg, var(--accent), #388bff); color:#04111e; }
+    button.danger{ background:#47252a; color:#ffd8dc; }
+    button.ghost{ background: transparent; border:1px solid #3a4656; }
+    button.save{ background:#1f3a2f; color:#ccffe6; }
+
+    .grid{ max-width:1050px; margin:8px auto; padding:0 16px 16px; display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; }
+    @media (max-width: 920px){ .toolbar{ grid-template-columns:1fr; } .grid{ grid-template-columns:1fr; } }
+
+    .card{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; position:relative; overflow:hidden; }
+    .card h2{ margin:4px 0 10px; font-size:16px; color:var(--muted); font-weight:700; letter-spacing:.3px; }
+
+    .stat{ font-family:var(--mono); display:flex; align-items:baseline; gap:10px; }
+    .stat .value{ font-size: clamp(28px,6vw,40px); font-weight:800; letter-spacing:.5px; }
+    .stat .unit{ color:var(--muted); }
+
+    .badges{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+    .badge{ background:#263143; color:#cfe6ff; border-radius:999px; padding:4px 10px; font-size:12px; }
+
+    .monsters{ max-width:1050px; margin:6px auto 80px; padding:0 16px; }
+    .monsters .list{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; }
+    @media (max-width: 750px){ .monsters .list{ grid-template-columns: repeat(2, 1fr);} }
+    .monster{ position:relative; display:flex; align-items:center; justify-content:center; width:100%; min-height:74px; font-size:18px; font-weight:800; letter-spacing:.5px; border-radius:12px; background: linear-gradient(180deg,#273447,#222a36); color:#eaf4ff; border:1px solid #334256; box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+    .monster[disabled]{ opacity:.45; filter:grayscale(.2); cursor:not-allowed; }
+    .monster .tag{ position:absolute; top:8px; right:8px; font-size:12px; background:#0f2135; color:#9ed0ff; padding:2px 8px; border-radius:999px; border:1px solid #3c5673; }
+
+    .footer{ position:fixed; inset:auto 0 0 0; backdrop-filter: blur(6px); background: linear-gradient(180deg, rgba(15,17,21,.0), rgba(15,17,21,.85)); padding:10px 16px 14px; border-top:1px solid #212a36; color:var(--muted); display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center; }
+    .footer .kpi{ display:flex; gap:6px; align-items:center; }
+    .footer .kpi .num{ font-family:var(--mono); color:var(--text); font-weight:800; }
+
+    :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; border-radius:8px; }
+
+    .pulse{ animation: pulse .6s ease; }
+    @keyframes pulse{ 0%{ box-shadow: var(--shadow), 0 0 0 0 rgba(106,208,255,.25)} 100%{ box-shadow: var(--shadow), 0 0 0 12px rgba(106,208,255,0)} }
+
+    .sr-only{ position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>困難拉圖斯：控時挑戰</h1>
+    <p id="live" aria-live="polite" class="sr-only">準備就緒</p>
+  </header>
+
+  <!-- 說明列 -->
+  <section class="toolbar" aria-label="遊戲說明">
+	<p style="color:var(--muted);margin:6px 0 0">1.選擇正常/2倍速、扣時分鐘後，點擊儲存設定。<br>2.遊戲結束時，點擊重置按鈕刷新。</p>
+  </section>
+
+  <!-- 控制列 -->
+  <section class="toolbar" aria-label="遊戲控制">
+	<div class="group" role="group" aria-label="速度檔與參數">
+      <button type="button" class="ghost" id="normalBtn">正常</button>
+      <button type="button" class="ghost" id="doubleBtn">2 倍速</button>
+      <span class="badge">扣時間隔：<strong id="drainIntervalDisplay">10</strong> 秒</span>
+      <span class="badge">出怪間隔：<strong id="spawnIntervalDisplay">50</strong> 秒</span>
+      <span class="badge">小怪存在：<strong id="monsterExistDisplay">40</strong> 秒</span>
+    </div>
+
+    <div class="group" role="group" aria-label="扣時設定">
+      <label for="drainAmountSelect">每次扣時減少</label>
+      <select id="drainAmountSelect" aria-label="每次減少時間">
+        <option value="20">20 分鐘</option>
+        <option value="30">30 分鐘</option>
+        <option value="40">40 分鐘</option>
+        <option value="50">50 分鐘</option>
+        <option value="60">60 分鐘</option>
+      </select>
+    </div>
+
+    <div class="group" role="group" aria-label="啟動與設定">
+      <button type="button" class="save" id="saveBtn">儲存設定</button>
+	  <button type="button" class="primary" id="startBtn">開始</button>
+      <button type="button" class="danger" id="resetBtn">重置</button>
+    </div>
+  </section>
+
+  <!-- 三大面板 -->
+  <main class="grid" aria-label="狀態面板">
+    <section class="card" aria-labelledby="panel-time">
+      <h2 id="panel-time">計時面板</h2>
+      <div class="stat">
+        <div id="timeDisplay" class="value">07:00</div>
+      </div>
+      <p style="color:var(--muted);margin:6px 0 0">00:00 或 12:00 觸發死亡機制。</p>
+    </section>
+
+    <section class="card" aria-labelledby="panel-countdown">
+      <h2 id="panel-countdown">倒數面板</h2>
+      <div class="stat">
+        <div id="countdownDisplay" class="value">10</div>
+        <div class="unit">秒</div>
+      </div>
+      <p style="color:var(--muted);margin:6px 0 0">倒數到 <strong>0</strong> 秒時立即扣除分鐘數。</p>
+    </section>
+
+    <section class="card" aria-labelledby="panel-multiplier">
+      <h2 id="panel-multiplier">倍率面板</h2>
+      <div class="stat">
+        <div id="multiplierDisplay" class="value">1.000</div>
+        <div class="unit">當前倍率</div>
+      </div>
+      <div class="badges">
+        <span class="badge">平均倍率：<strong id="avgMultiplierDisplay">—</strong></span>
+        <span class="badge">進行秒數：<strong id="elapsedDisplay">0</strong>s</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- 小怪區 -->
+  <section class="monsters" aria-label="小怪">
+    <h2 class="sr-only">小怪</h2>
+    <div id="monsterArea" class="list" role="list"></div>
+  </section>
+
+  <!-- 底部統計 -->
+  <footer class="footer" aria-label="本回合統計">
+    <div class="kpi">狀態：<span id="statusText" class="num">待機</span></div>
+    <div class="kpi">本回合平均倍率：<span id="footerAvg" class="num">—</span></div>
+    <div class="kpi">已過秒數：<span id="footerElapsed" class="num">0</span></div>
+  </footer>
+
+  <script>
+    // 常數 & 預設
+    const LIMIT_MIN = 0;
+    const LIMIT_MAX = 720;
+    const INIT_TIME = 420; // 7 小時（分鐘）
+    const DEFAULTS = { drainInterval: 10, spawnInterval: 50, monsterExist: 40, drainAmount: 20 };
+    const SPEED_DOUBLE = { drainInterval: 5, spawnInterval: 25, monsterExist: 20 };
+
+    let state = {
+      currentTime: INIT_TIME,
+      drainInterval: DEFAULTS.drainInterval,
+      spawnInterval: DEFAULTS.spawnInterval,
+      monsterExist: DEFAULTS.monsterExist,
+      drainAmount: DEFAULTS.drainAmount,
+      countdown: DEFAULTS.drainInterval, // 以「整數秒」開始，0 就扣
+      running: false,
+      drainTimer: null,
+      spawnTimer: null,
+      monsterTimeout: null,
+      totalSeconds: 0,
+      multiplierSum: 0,
+      speedMode: 'normal', // 'normal' | 'double'
+    };
+
+    // 工具
+    const $ = (s)=>document.querySelector(s);
+    const on = (el, ev, fn)=> el.addEventListener(ev, fn);
+    const clamp = (v, lo, hi)=> Math.min(hi, Math.max(lo, v));
+
+    function formatTime(min){
+      min = clamp(min, LIMIT_MIN, LIMIT_MAX);
+      const h = Math.floor(min / 60);
+      const m = Math.floor(min % 60);
+      return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+    }
+    function linear(t, t1, t2, m1, m2){ return m1 + ((t - t1) / (t2 - t1)) * (m2 - m1); }
+    function calculateMultiplier(t = state.currentTime){
+      t = clamp(t, LIMIT_MIN, LIMIT_MAX);
+      if (t <= 0.1667) return 0;
+      if (t < 180) return linear(t, 0.1667, 180, 0, 0.5);
+      if (t < 360) return linear(t, 180, 360, 0.5, 1);
+      if (t < 540) return linear(t, 360, 540, 1, 1.5);
+      if (t < 710) return linear(t, 540, 710, 1.5, 2);
+      return 2;
+    }
+
+    function updateSpeedDisplay(){
+      $('#drainIntervalDisplay').innerText = state.drainInterval;
+      $('#spawnIntervalDisplay').innerText = state.spawnInterval;
+      $('#monsterExistDisplay').innerText = state.monsterExist;
+    }
+
+    function updatePanels(pulse=false){
+      $('#timeDisplay').innerText = formatTime(state.currentTime);
+      $('#countdownDisplay').innerText = state.countdown;
+      $('#multiplierDisplay').innerText = calculateMultiplier().toFixed(3);
+      const avg = state.totalSeconds ? (state.multiplierSum / state.totalSeconds) : 0;
+      $('#avgMultiplierDisplay').innerText = state.totalSeconds ? avg.toFixed(3) : '—';
+      $('#elapsedDisplay').innerText = state.totalSeconds;
+      $('#footerAvg').innerText = state.totalSeconds ? avg.toFixed(3) : '—';
+      $('#footerElapsed').innerText = state.totalSeconds;
+      if(pulse){ ['#panel-time', '#panel-countdown', '#panel-multiplier'].forEach(id=>{ const c = $(id).closest('.card'); if(c){ c.classList.remove('pulse'); void c.offsetWidth; c.classList.add('pulse'); } }); }
+    }
+
+    // 速度切換
+    function setNormal(){
+      state.drainInterval = DEFAULTS.drainInterval;
+      state.spawnInterval = DEFAULTS.spawnInterval;
+      state.monsterExist  = DEFAULTS.monsterExist;
+      state.countdown = state.drainInterval; // 重置為整數秒
+      state.speedMode = 'normal';
+      updateSpeedDisplay();
+    }
+    function setDouble(){
+      state.drainInterval = SPEED_DOUBLE.drainInterval;
+      state.spawnInterval = SPEED_DOUBLE.spawnInterval;
+      state.monsterExist  = SPEED_DOUBLE.monsterExist;
+      state.countdown = state.drainInterval; // 重置為整數秒
+      state.speedMode = 'double';
+      updateSpeedDisplay();
+    }
+
+    // 設定儲存 / 套用
+    function saveSettings(){
+      const payload = { drainAmount: state.drainAmount, speedMode: state.speedMode };
+      localStorage.setItem('extremeClockSettings', JSON.stringify(payload));
+      alert('設定已儲存！\n每次減少：'+ state.drainAmount +' 分鐘\n速度檔：'+ (state.speedMode==='double'?'2 倍速':'正常'));
+    }
+    function loadSettings(){
+      try{
+        const raw = localStorage.getItem('extremeClockSettings');
+        if(!raw) return;
+        const cfg = JSON.parse(raw);
+        if (cfg.drainAmount) {
+          state.drainAmount = parseInt(cfg.drainAmount,10);
+          $('#drainAmountSelect').value = String(state.drainAmount);
+        }
+        if (cfg.speedMode === 'double') setDouble(); else setNormal();
+      }catch(e){ console.warn('設定讀取失敗', e); }
+    }
+
+    // 遊戲主循環：倒數到 0 立即扣
+    function tick(){
+      if (!state.running) return;
+      state.countdown--;
+      if (state.countdown === 0){
+        state.currentTime = clamp(state.currentTime - state.drainAmount, LIMIT_MIN, LIMIT_MAX);
+        state.countdown = state.drainInterval; // 重新以整數秒開始
+      }
+      if (state.currentTime <= LIMIT_MIN || state.currentTime >= LIMIT_MAX){ endGame(); return; }
+      state.multiplierSum += calculateMultiplier();
+      state.totalSeconds++;
+      updatePanels(true);
+    }
+
+    function spawnMonsters(){
+      const area = $('#monsterArea');
+      area.innerHTML = '';
+      const pool = [
+        {text:'10 min', value:10},
+        {text:'30 min', value:30},
+        {text:'50 min', value:50},
+        {text:'1 hour', value:60},
+        {text:'2 hour', value:120},
+        {text:'4 hour', value:240},
+        {text:'9 hour', value:540},
+        {text:'x2', value:'x2'},
+      ];
+      for(let i=0;i<4;i++){
+        const m = pool[Math.floor(Math.random()*pool.length)];
+        const btn = document.createElement('button');
+        btn.type='button'; btn.className='monster'; btn.setAttribute('role','listitem'); btn.setAttribute('aria-label','小怪：'+m.text);
+        btn.innerHTML = `<span>${m.text}</span>`;
+        btn.addEventListener('click', ()=>{
+          if(btn.disabled) return;
+          if(m.value==='x2') state.currentTime = clamp(state.currentTime*2, LIMIT_MIN, LIMIT_MAX);
+          else state.currentTime = clamp(state.currentTime + m.value, LIMIT_MIN, LIMIT_MAX);
+          btn.disabled = true; updatePanels(true);
+        });
+        area.appendChild(btn);
+      }
+      clearTimeout(state.monsterTimeout);
+      state.monsterTimeout = setTimeout(()=>{ area.innerHTML=''; }, state.monsterExist*1000);
+    }
+
+    function startGame(){
+      if (state.running) return;
+      state.drainAmount = parseInt($('#drainAmountSelect').value, 10);
+      state.countdown = state.drainInterval; // 以整數秒開始
+      state.running = true;
+      $('#statusText').innerText = '進行中';
+      spawnMonsters();
+      clearInterval(state.drainTimer); state.drainTimer = setInterval(tick, 1000);
+      clearInterval(state.spawnTimer); state.spawnTimer = setInterval(spawnMonsters, state.spawnInterval*1000);
+    }
+
+    function resetGame(){
+      state.running = false;
+      clearInterval(state.drainTimer);
+      clearInterval(state.spawnTimer);
+      clearTimeout(state.monsterTimeout);
+      state.currentTime = INIT_TIME;
+      state.totalSeconds = 0; state.multiplierSum = 0;
+      state.countdown = state.drainInterval; // 回整數秒
+      $('#monsterArea').innerHTML = '';
+      $('#statusText').innerText = '待機';
+      updatePanels(true);
+    }
+
+    function endGame(){
+      state.running = false;
+      clearInterval(state.drainTimer);
+      clearInterval(state.spawnTimer);
+      clearTimeout(state.monsterTimeout);
+      const avg = state.totalSeconds ? (state.multiplierSum / state.totalSeconds) : 0;
+      $('#multiplierDisplay').innerText = '平均倍率: '+avg.toFixed(3);
+      $('#footerAvg').innerText = avg.toFixed(3);
+      $('#statusText').innerText = '結束';
+      // 確保計時面板顯示為邊界時間（例如 00:00 或 12:00）
+      $('#timeDisplay').innerText = formatTime(state.currentTime);
+      alert('死亡機制觸發，遊戲結束！');
+    }
+
+    // 事件
+    on($('#normalBtn'),'click', setNormal);
+    on($('#doubleBtn'),'click', setDouble);
+    on($('#startBtn'),'click', startGame);
+    on($('#resetBtn'),'click', resetGame);
+    on($('#saveBtn'),'click', saveSettings);
+    on($('#drainAmountSelect'),'change', (e)=>{ state.drainAmount = parseInt(e.target.value,10); });
+
+    // 啟動
+    updateSpeedDisplay();
+    loadSettings(); // 優先套用使用者設定
+    updatePanels();
+  </script>
+</body>
+</html>
